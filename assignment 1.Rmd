@@ -1,0 +1,227 @@
+---
+title: "Assignment 1 STAT636"
+author: "Chris Berardi"
+date: "Fall 2017 Section 700"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+\pagenumbering{gobble}
+
+## Question 1
+Part A
+```{r}
+##Read in data, give column names 
+dta <- read.delim("C:\\Users\\Saistout\\Desktop\\636\\data\\oxygen.dat", header = FALSE, sep= "")
+colnames(dta)<-c("X_1", "X_2", "X_3", "X_4", "Gender")
+
+## divide into male and female data sets rename the columns
+male_index <- dta[[5]] == "male"
+female_index <- dta[[5]] == "female"
+for (i in c(1:4)){
+  x=dta[[i]]
+  xg=x[male_index]
+  if (i== 1) {
+   male_dta=xg 
+  }
+  else {
+    male_dta=cbind(male_dta,xg)
+  }
+}
+colnames(male_dta)<-c("X_1", "X_2", "X_3", "X_4")
+
+##Calculate the means and standard deviations for each column of the male and female data sets and rename the columns
+for (i in c(1:4)){
+  meanx=mean(male_dta[,i])
+  sdx = sd(male_dta[,i])
+  if (i ==1){
+    male_table = c(i,meanx,sdx)
+  }
+  else {
+    male_table = rbind(male_table, c(i,meanx,sdx))
+  }
+}
+colnames(male_table)<-c("Variable Number","Mean","Standard Deviation")
+
+for (i in c(1:4)){
+  x=dta[[i]]
+  xg=x[female_index]
+  if (i == 1) {
+   female_dta=xg 
+  }
+  else {
+    female_dta=cbind(female_dta,xg)
+  }
+}
+colnames(female_dta)<-c("X_1", "X_2", "X_3", "X_4")
+
+for (i in c(1:4)){
+  meanx=mean(female_dta[,i])
+  sdx = sd(female_dta[,i])
+  if (i ==1){
+    female_table = c(i,meanx,sdx)
+  }
+  else {
+    female_table = rbind(female_table, c(i,meanx,sdx))
+  }
+}
+colnames(female_table)<-c("Variable Number","Mean","Standard Deviation")
+```
+
+Male Table
+```{r} 
+male_table
+```
+  
+Female Table
+```{r} 
+female_table 
+```
+
+### Part B.
+```{r}
+##Make pairs plots of the whole data set
+pairs(dta)
+```
+From the pair plots, it seems clear that their is linear relationship between variables X_3 and X_4, as well as between X_1 and X_2. That is not so surprising since they what those pairs of variables measure are related. As for outliers, test subject 48 seems to be an outlier. She is the point on the far right of the X_2 plots, and the far right of the X_1 plots.
+
+### Parts C.
+```{r}
+## Make a coplot of X1 by X3 by gender
+coplot(X_1 ~ X_3 | Gender, data=dta)
+```
+While X_1 values are only slightly higher for men than for women, there is a clearly higher mean for X_3 for men than for women. The highest female values for X_3 correspond to the lowest X_3 values for men. 
+\pagebreak
+
+## Question 2
+### Part Bi.
+```{r}
+##Create a 2x2 grid of points to calculate the values of multivariate normal pdf at
+mu = rbind(1,-1)
+sigma = cbind(c(1.0, 1-.6),c(-1.6,4.0))
+x = rbind(seq(-6,6,.1))
+y = rbind(seq(-6,6,.1))
+
+##Create a matrix to hold the values of the pdf
+z=matrix(nrow=length(x),ncol=length(y))
+
+##Loop through the grid by x and y values to populate the matrix of pdf values
+for (i in c(1:length(x))){
+  for (j in c(1:length(y))){
+    z[i,j]= 1/(2*pi*sqrt(det(sigma)))*exp(-t(rbind(x[i],y[j])-mu)%*%solve(sigma)%*%(rbind(x[i],y[j])-mu)/2)
+  }
+}
+
+##Use the persp function to plots the pdf. Change the default view angle and the color because I didn't like the ##defaults
+persp(x,y,z, zlab="PDF", xlab="X-Value", ylab="Y-Value", main="Multivariate Normal PDF", theta=40, phi=30, col="cyan", ticktype="detailed")
+```
+
+### Part Bii.
+```{r}
+##Define O and P to calculate their euclidean and statistical distances
+o <- rbind(0,0)
+p <- rbind(0,-2)
+```
+
+The statistical distance between O and $\mu$ is:
+``` {r}
+##Calculate the statistical distance from O and mu
+sqrt(t(o-mu)%*%solve(sigma)%*%(o-mu))
+```
+  
+The Euclidean distance between O and $\mu$ is:
+``` {r}
+##Calculate the Euclidean distance from O and mu
+sqrt(sum((o-mu)^2))
+```
+  
+The statistical distance between P and $\mu$ is:
+```{r}
+##Calculate the statistical distance from P and mu
+sqrt(t(p-mu)%*%solve(sigma)%*%(p-mu))
+```
+  
+The Euclidean distance between P and $\mu$ is:
+``` {r}
+##Calculate the Euclidean distance from P and mu
+sqrt(sum((p-mu)^2))
+```
+  
+Therefore by statistical distance $\mu$ is closer to the origin than to point P. Using Euclidean distance both points are equal distance from $\mu$.
+
+### Part Biii.
+P(**x** $\in$ R~O~) > P(**x** $\in$ R~P~) since the statistical distance between the mean vector and the origin is less than the distance to the point P. Therefore a value near R~O~ is closer to the mean than a value near R~P~.
+\pagebreak
+
+##Question 4
+```{r}
+##Define the matricies
+A = cbind(c(4,4.001),c(4.001,4.002))
+B = cbind(c(4,4.001),c(4.001,4.002001))
+```
+The A^-1^ is 
+```{r} 
+##Use solve to calculate the inverse of the matrix
+solve(A)
+```
+The B^-1^ is 
+```{r}
+##Use solve to calculate the inverse of the matrix
+solve(B)
+```
+Therefore A^-1^ ~ 3B^-1^
+\pagebreak
+
+##Question 6
+### Part A
+```{r}
+##Load the necessary libraries
+library(plotrix)
+library(mvtnorm)
+##Define the mean vector and the covariance matricies then create a list of all the covariance matricies to be used in ##a later loop, also calculate the square root of the 95th percentile of the chi squared distribution
+mu=rbind(1,1)
+sig1=cbind(c(1,.8),c(.8,1))
+sig2=cbind(c(1,0),c(0,1))
+sig3=cbind(c(1,-.8),c(-.8,1))
+sig4=cbind(c(1,.40),c(.40,.25))
+sig5=cbind(c(1,0),c(0,.25))
+sig6=cbind(c(1,-.40),c(-.40,.25))
+sig7=cbind(c(.25,.40),c(.40,1))
+sig8=cbind(c(.25,0),c(0,1))
+sig9=cbind(c(.25,-.40),c(-0.40,1))
+sigs=list(sig1,sig2,sig3,sig4,sig5,sig6,sig7,sig8,sig9)
+chi = sqrt(qchisq(.95,2))
+
+##Define a matrix to hold the percent calculations for 6b
+percent=matrix(nrow=9, ncol=1)
+
+##Plot 9 graphs on a page in 3x3 configuration
+par(mfrow=(c(3,3)))
+
+##Loop through each covariance matrix solving for the eigenvectors and eigen values to plot the ellipse defined by the ##equation in 6a
+for ( i in c(1:9)){
+  eigs = eigen(solve(sigs[[i]]))
+  loop=as.character(i)
+  plot(1, type="n", xlim=c(-5,5), ylim=c(-5,5), xlab="X1", ylab="X2", main=paste("Sigma", as.character(i)))
+  draw.ellipse(t(mu), a=chi/sqrt(eigs[[1]][1]),b=chi/sqrt(eigs[[1]][2]),angle=atan(eigs[[2]][2,1]/eigs[[2]][1,1]),    deg=FALSE, border="red", nv=1000)
+  
+  ##Calculate the percent of random realizations of the multivariate normal that fall within the ellipse defined above
+  draws = rmvnorm(5000,t(mu),sigs[[i]])
+  n=0;
+  for (j in c(1:5000)){
+    if ((draws[j,]-t(mu))%*%solve(sigs[[i]])%*%t(draws[j,]-t(mu)) < chi^2){
+      n=n+1
+    }
+  }
+  percent[i]=n/5000
+}
+
+```
+
+###Part B
+```{r}
+percent
+```
+If I had to guess, which I do, I would guess that probability is an $\alpha$ level condfidence volume. 

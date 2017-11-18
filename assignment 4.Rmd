@@ -1,0 +1,93 @@
+---
+title: "Assignment 4"
+author: "Chris Berardi"
+date: "November 12, 2017"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+###Question 1
+```{r}
+library(MASS)
+library(kableExtra)
+library(knitr)
+
+##Read Hall of Fame Data
+hof = read.csv("C:\\Users\\Saistout\\Desktop\\636\\data\\hof_data.csv")
+##Attach HOF data to increase readability of code
+attach(hof)
+##Create vectors of kappas
+kappa = seq(0,1,.01)
+##Create containers for performance measures for linear and quadratic
+linear_GOF = matrix(ncol=6, nrow=length(kappa)) 
+colnames(linear_GOF) =c("Kappa","Sensitivity", "Specificity", "PPV", "NPV", "Balanced")
+linear_GOF[,1]= kappa
+
+quad_GOF = matrix(ncol=6, nrow=length(kappa)) 
+colnames(quad_GOF) =c("Kappa","Sensitivity", "Specificity", "PPV", "NPV", "Balanced")
+quad_GOF[,1]= kappa
+
+##Create container to holf HOF predictions based on kappa value
+HOF_pred = vector(length = length(hof[,1]))
+##Create Vector for Presence in the hall of fame with logical values instead of the Y,N found in the data
+HOF_TF = (HOF=="Y")
+##Create lists of indicies for membership and nonmembership in the HOF
+In = which(HOF_TF)
+Out = which(!HOF_TF)
+
+##Linear discriminant analysis
+linear = lda(HOF ~ H + HR + RBI + SLG + OBP, data = hof, CV=TRUE)
+
+##Loop through kappas to populate linear_GOF performance measures
+for (i in 1:length(kappa)){
+## Prediction at this kappa level
+    HOF_pred = linear$posterior[,2] >= kappa[i]
+## Sensitivity
+  linear_GOF[i,2]=sum(HOF_pred[In]==HOF_TF[In])/length(In)
+## Specificity
+  linear_GOF[i,3]=sum(HOF_pred[Out]==HOF_TF[Out])/length(Out)
+##PPV
+  linear_GOF[i,4]=length(In)/sum(HOF_pred=="TRUE")
+##NPV
+  linear_GOF[i,5]=length(Out)/sum(HOF_pred=="FALSE")
+##Balanced
+  linear_GOF[i,6]=(linear_GOF[i,2]+3*linear_GOF[i,3])/4
+}
+
+##Quadratic disciminant analysis
+quad = qda(HOF ~ H + HR + RBI + SLG + OBP, hof, CV=TRUE)
+##Loop through kappas to populate quad_GOF statistics
+for (i in 1:length(kappa)){
+## Prediction at this kappa level
+  HOF_pred = quad$posterior[,2] >= kappa[i]
+## Sensitivity
+  quad_GOF[i,2]=sum(HOF_pred[In]==HOF_TF[In])/length(In)
+## Specificity
+  quad_GOF[i,3]=sum(HOF_pred[Out]==HOF_TF[Out])/length(Out)
+##PPV
+  quad_GOF[i,4]=length(In)/sum(HOF_pred=="TRUE")
+##NPV
+  quad_GOF[i,5]=length(Out)/sum(HOF_pred=="FALSE")
+##Balanced
+  quad_GOF[i,6]=(quad_GOF[i,2]+3*quad_GOF[i,3])/4
+}
+```
+####a.
+```{r}
+##Plot kappa vs. the balanced accuary for the LDA and QDA
+plot(linear_GOF[,1], linear_GOF[,6], col="blue", xlab="Kappa", ylab="Balanced Accuracy", ylim=c(0,1),xlim=c(0,1))
+points(quad_GOF[,1], quad_GOF[,6], col="dark green")
+##Add a legend for readability
+legend(.8,.3, "Blue: LDA, 
+Green: QDA")
+```
+
+####b.
+The maximum value for the balanced accuracy occurs from LDA with the following values of kappa and other performance methods:   
+`r kable(linear_GOF[which.max(linear_GOF[,6]),], "html")`
+
+The maximum value for the balanced accuracy occurs from QDA with the following values of kappa and other performance methods:   
+`r kable(quad_GOF[which.max(linear_GOF[,6]),], "html")`

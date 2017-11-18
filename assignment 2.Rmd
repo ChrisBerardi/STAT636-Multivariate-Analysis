@@ -1,0 +1,305 @@
+---
+title: "636 Assignment 2"
+author: "Chris Berardi"
+date: "October 8, 2017"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Question 1
+$$\mathbf{X} = \left[\begin{array}
+{rrr}
+3 & 6 \\
+4 & 4 \\
+5 & 7 \\
+4 & 7
+\end{array}\right]
+$$
+The mle for **$\mu$** is $\widehat{\mu}$=$\bar{X}$
+$$\mathbf {\bar{X}} = \left[\begin{array}
+{rrr}
+4 \\
+6 
+\end{array}\right]
+$$
+The mle for $\Sigma$ is $\widehat{\Sigma}$=$\frac{n-1}{n}$S
+$$\mathbf{S} = \left[\begin{array}
+{rrr}
+1/2 & 3/16 \\
+3/16 & 3/2
+\end{array}\right]
+$$
+
+###Question 2
+#### a.
+(X~i~-$\mu$)'$\Sigma$^-1^(X~i~-$\mu$) ~ $\chi^2_6$, if X is normally distributed then the distribution of this statistic is $\chi^2$.
+  
+#### b.
+$\bar{X}$ ~ N~6~($\mu$,$\frac{1}{n}$$\Sigma$)  
+  
+$\sqrt{n}$($\bar{X}$-$\mu$) ~ N~6~(0,$\Sigma$), since this is a shifted, scaled version of $\bar{X}$. Subtracting the mean shifts the distribution to zero, while multiplying removes the scale factor for the covariance since, Var(aX)=a^2^Var(x)
+
+#### c.
+n($\bar{X}$-$\mu$)'$\Sigma$^-1^($\bar{X}$-$\mu$) ~ $\chi^2_6$, since $\bar{X}$ ~ N~6~, then this must be the same distribution as a.
+
+#### d.
+n($\bar{X}$-$\mu$)'S^-1^($\bar{X}$-$\mu$) ~ $\frac{(59)6}{(54)}$F~60,54~, since the sample is from a N~6~ distribution, this statistic has a scaled F-distribution. 
+
+###Question 3
+```{r}
+library(car)
+used_cars <- read.csv("C:\\Users\\Saistout\\Desktop\\636\\data\\used_cars.csv")
+attach(used_cars)
+## Define linear models to be used the powerTransform function to find the optimum transformation to normality
+lmage <- Age ~ 1
+powerage <- powerTransform(lmage)
+## The value of the power transform is the 6th object in the list
+transage <- Age^powerage[[6]]
+
+## Do the same for the Price data
+lmPrice <- Price ~ 1
+powerPrice <- powerTransform(lmPrice)
+transPrice<- Price^powerPrice[[6]]
+
+## Do the same for both variables together
+lmboth <- cbind(Age, Price) ~ 1
+powerboth <-powerTransform(lmboth)
+
+detach(used_cars)
+```
+#### a.
+```{r}
+## Use qqnorm and qqline to create Q-Q plots
+qqnorm(transage)
+qqline(transage)
+```
+  
+$\hat{\lambda}_1$= `r powerage[[6]]`
+  
+#### b.
+```{r}
+qqnorm(transPrice)
+qqline(transPrice)
+```
+  
+$\hat{\lambda}_2$= `r powerPrice[[6]]`
+  
+#### c.
+$\hat{\lambda}'$= [`r powerboth[[6]]`], which is identical to the results from doing each individually. 
+
+###Question 4
+```{r}
+sweat <- read.csv("C:\\Users\\Saistout\\Desktop\\636\\data\\sweat.csv")
+## Define n and p for future F dist. use
+n = length(sweat[,1])
+p = length(sweat[1,])
+```
+#### a.
+```{r}
+## Compress the plots a little
+par(mfrow=c(1,3))
+qqnorm(sweat[,1], ylab="Sweat Quantiles")
+qqline(sweat[,1])
+qqnorm(sweat[,2], ylab="Sodium Quantiles")
+qqline(sweat[,2])
+qqnorm(sweat[,3], ylab="Potassium Quantiles")
+qqline(sweat[,3])
+plot(sweat[,1],sweat[,2], xlab="Sweat Rate", ylab="Sodium Content")
+plot(sweat[,2],sweat[,3], xlab="Sodium Content", ylab="Potassium Content")
+plot(sweat[,1],sweat[,3], xlab="Sweat Rate", ylab="Potassium Content")
+```
+  
+From the Q-Q plots there appears to be some deviation from normality for the sweat and potassium data. The scatterplots show a clear correlation between sweat rate and both sodium and potassium. Both of which are violations of the assumptions for Hotelling's T^2^ test.
+  
+#### b.
+```{r}
+## Define the sample mean vector and the sample covariance matrix
+xbar = colMeans(sweat)
+s=cov(sweat)
+##Calculate the F-statistic to be used for the confidence ellipsoid
+f_stat=sqrt((n-1)*p/(n-p)*qf(.95, p , n-p))
+eigs = eigen(s)
+```
+Axes and half lengths of the 95% confidence ellipsoid centered at (`r xbar`) are:
+  
+`r f_stat*eigs[[2]][,1]`, $\lambda_1$= `r f_stat*sqrt(eigs[[1]][1]/n)`
+  
+`r f_stat*eigs[[2]][,2]`, $\lambda_2$= `r f_stat*sqrt(eigs[[1]][2]/n)`
+  
+`r f_stat*eigs[[2]][,3]`, $\lambda_3$= `r f_stat*sqrt(eigs[[1]][3]/n)`
+  
+
+#### c.
+```{r}
+## Define the simultaneous T2 confidence interval for each variable
+T_ci_Sweat=sqrt(s[1,1]/n)*f_stat
+T_ci_Na=sqrt(s[2,2]/n)*f_stat
+T_ci_P=sqrt(s[3,3]/n)*f_stat
+```
+The simultaneous T^2^ confidence intervals are:
+  
+Sweat: `r xbar[1]` $\pm$ `r T_ci_Sweat` = (`r xbar[1]+ c(-1,1)*T_ci_Sweat`)
+  
+Sodium: `r xbar[2]` $\pm$ `r T_ci_Na` = (`r xbar[2]+ c(-1,1)*T_ci_Na`)
+  
+Potassium: `r xbar[3]` $\pm$ `r T_ci_P` = (`r xbar[3]+ c(-1,1)*T_ci_P`)
+  
+#### d.
+```{r}
+## Define the simultaneous Bonferroni confidence interval for each variable
+Bon_ci_Sweat=qt(1- .05/(2 * p),n-1)*sqrt(s[1,1]/n)
+Bon_ci_Na= qt(1 - .05/(2 * p),n-1)*sqrt(s[2,2]/n)
+Bon_ci_P = qt(1 - .05/(2 * p),n-1)*sqrt(s[3,3]/n)
+```
+The simultaneous Bonferroni confidence intervals are:
+  
+Sweat: `r xbar[1]` $\pm$ `r Bon_ci_Sweat` = (`r xbar[1]+ c(-1,1)*Bon_ci_Sweat`)
+  
+Sodium: `r xbar[2]` $\pm$ `r Bon_ci_Na` = (`r xbar[2]+ c(-1,1)*Bon_ci_Na`)
+  
+Potassium: `r xbar[3]` $\pm$ `r Bon_ci_P` = (`r xbar[3]+ c(-1,1)*Bon_ci_P`)
+  
+#### e.
+```{r}
+##Define the null mean
+mu_0=c(4,45,10)
+## Compute the test statistic
+T2 = n*(t(xbar-mu_0)%*%solve(s)%*%(xbar-mu_0))
+## compute the f-statistic
+f_comp = (n-1)*p/(n-p)*qf(.95, p , n-p)
+## compute the p-value
+p_value = 1-pf((n-p)*T2/(p*(n-1)),p,n-p)
+```
+Test Statistic: `r T2`  
+Critical Value: `r f_comp`  
+p_value: `r p_value`  
+Therefore the data does no provide is not sufficient evidence at an $\alpha$=.05 level to reject H~0~.
+  
+#### f.
+Since, the statistical distance between $\mu$' and $\bar{X}$, `r sqrt(T2)` < `r f_stat`, the F-statistic defining the ellipsoid. Therefore $\mu$' is inside the 95% confidence ellipsoid. This is consistent with the results in e. Since this point is inside the 95% confidence ellipsoid the data does not provide sufficient evidence at an $\alpha$=.05 confidence level to reject H~0~. 
+
+#### g.
+```{r}
+##Use the seed defined
+set.seed(101)
+##Set the extra vars to be used with the bootstrap code
+B = 500
+##Create vector to hold test statistic
+boot = vector(length=B)
+##Transform data to make H0 true
+trans_sweat = scale(sweat, center=colMeans(sweat)-mu_0,scale=FALSE)
+##Bootstrap
+for (i in 1:B){
+##Sample from rows
+  samp = trans_sweat[sample(n,replace=TRUE),]
+##Calculate sample covariance matrix
+  samp_cov = cov(samp)
+##Calculate H_0 covariance matrix
+  H_0_cov=matrix(0, ncol=3, nrow=3)
+  for (j in 1:n){
+    H_0_cov=H_0_cov+(samp[j,]-mu_0)%*%t(samp[j,]-mu_0)
+  }
+  H_0_cov=H_0_cov/(n-1)
+##Calculate test statistic
+  boot[i] = (det(samp_cov)/det(H_0_cov))^(n/2)
+}
+##Calculate lambda for the data
+sweat_mat=data.matrix(sweat)
+H_0_cov=matrix(0, ncol=3, nrow=3)
+for (j in 1:n){
+  H_0_cov=H_0_cov+(sweat_mat[j,]-mu_0)%*%t(sweat_mat[j,]-mu_0)
+}
+H_0_cov=H_0_cov/(n-1)
+lambda=(det(s)/det(H_0_cov))^(n/2)
+##Calculate the percent of values more extreme than the sample lambda
+p_value_boot = mean(boot >= lambda)
+```
+The p-value for the bootstrap likelihood ratio test is p=`r p_value_boot`. 
+
+###Question 5
+```{r}
+peanut <- read.csv("C:\\Users\\Saistout\\Desktop\\636\\data\\peanut.csv")
+attach(peanut)
+```
+#### a.
+```{r}
+fit = manova(as.matrix(peanut[,3:5]) ~ Location+Variety+ Location*Variety, peanut)
+summary(fit, test="Wilks")
+
+```
+As can be seen from the MANOVA table, there does not exist evidence at an $\alpha$=.05 to support the claim of a significant interaction effect between location and variety. Because a significant interaction effect was not established it is appropriate to look for main effects. There was both no significant evidence of a main effect for either variety or location at an $\alpha$=.05 level. 
+
+#### b.
+```{r}
+##Define constants for MANOVA
+g =2
+b = 3
+n = 2
+p = 3
+##Define Summary Statistics, use plastic code was template
+x_bar=colMeans(peanut[,3:5])
+x_bar_lk <- rbind(colMeans(peanut[Location == 1 & Variety == 5, 3:5]), 
+  colMeans(peanut[Location == 1 & Variety == 6, 3:5]),
+  colMeans(peanut[Location == 1 & Variety == 8, 3:5]),
+  colMeans(peanut[Location == 2 & Variety == 5, 3:5]), 
+  colMeans(peanut[Location == 2 & Variety == 6, 3:5]),
+  colMeans(peanut[Location == 2 & Variety == 8, 3:5]))
+x_bar_l_dot <- rbind(colMeans(peanut[Location == 1, 3:5]), colMeans(peanut[Location == 2, 3:5]))
+x_bar_dot_k <- rbind(colMeans(peanut[Variety == 5, 3:5]), colMeans(peanut[Variety == 6, 3:5])
+                     ,colMeans(peanut[Variety == 8, 3:5]))
+
+##Calculate the SSP
+SSP_cor <- SSP_fac_1 <- SSP_fac_2 <- SSP_int <- SSP_res <- matrix(0, nrow = p, ncol = p)
+## Replace the 2's with 3's since there are 3 levels of factor 2
+for(l in 1:g) {
+  SSP_fac_1 <- SSP_fac_1 + b * n * t(x_bar_l_dot[l, , drop = FALSE] - x_bar) %*% 
+    (x_bar_l_dot[l, , drop = FALSE] - x_bar)
+for(k in 1:b) {
+## Move SSP_fac_2 into the first inner loop since it needs to run b times, only allow to run during the first
+## iteration of the outer loop
+      if(l == 1) {
+          SSP_fac_2 <- SSP_fac_2 + g * n * t(x_bar_dot_k[k, , drop = FALSE] - x_bar) %*% 
+        (x_bar_dot_k[k, , drop = FALSE] - x_bar)
+      }
+      SSP_int <- SSP_int + n * t(x_bar_lk[(l - 1) * 3 + k, , drop = FALSE] - 
+      x_bar_l_dot[l, , drop = FALSE] - x_bar_dot_k[k, , drop = FALSE] + x_bar) %*% 
+      (x_bar_lk[(l - 1) * 3 + k, , drop = FALSE] - x_bar_l_dot[l, , drop = FALSE] - 
+      x_bar_dot_k[k, , drop = FALSE] + x_bar)
+    for(r in 1:n) {
+      SSP_res <- SSP_res + t(as.matrix(peanut[(l - 1) * 3 * n + (k - 1) * n + r, 3:5]) - 
+        x_bar_lk[(l - 1) * 3 + k, , drop = FALSE]) %*% 
+        (as.matrix(peanut[(l - 1) * 3 * n + (k - 1) * n + r, 3:5]) - 
+        x_bar_lk[(l - 1) * 3 + k, , drop = FALSE])
+      SSP_cor <- SSP_cor + t(as.matrix(peanut[(l - 1) * 3 * n + (k - 1) * n + r, 3:5]) - 
+        x_bar) %*% (as.matrix(peanut[(l - 1) * 3 * n + (k - 1) * n + r, 3:5]) - x_bar)
+    }
+  }
+}
+## Compute p-vaulues
+Lambda <- det(SSP_res) / det(SSP_fac_1 + SSP_res)
+p_loc = 1 - pf((((g * b * (n - 1) - p + 1) / 2) / ((abs((g - 1) - p) + 1) / 2)) * 
+  (1 - Lambda) / Lambda, abs((g - 1) - p) + 1, g * b * (n - 1) - p + 1)
+
+Lambda <- det(SSP_res) / det(SSP_fac_2 + SSP_res)
+p_var = 1 - pf((((g * b * (n - 1) - p + 1) / 2) / ((abs((b - 1) - p) + 1) / 2)) * 
+  (1 - Lambda) / Lambda, abs((b - 1) - p) + 1, g * b * (n - 1) - p + 1)
+
+Lambda <- det(SSP_res) / det(SSP_int + SSP_res)
+p_int = 1 - pf((((g * b * (n - 1) - p + 1) / 2) / ((abs((g - 1) * (b - 1) - p) + 1) / 2)) * 
+  (1 - Lambda) / Lambda, abs((g - 1) * (b - 1) - p) + 1, g * b * (n - 1) - p + 1)
+
+```
+
+Computing the p-values for the different tests in the same order as they appear in the MANOVA output,  
+
+Location: p= `r p_loc`, which is much higher than the MANOVA value.
+  
+Variety: p= `r p_var`, which is much higher to the MANOVA value.
+  
+Interaction: p= `r p_int`, which is much higher than the MANOVA value.
+  
+None of the changes in the p-values change the interpretations of the results of the tests from part a.
+

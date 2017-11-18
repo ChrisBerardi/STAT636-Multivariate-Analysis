@@ -1,0 +1,147 @@
+---
+title: "Assignment 3 STAT636"
+author: "Chris Berardi"
+date: "Fall 2017 Section 700"
+output: pdf_document
+---
+\pagenumbering{gobble}
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Question 1
+```{r}
+##Read in data
+dta = read.csv("C:\\Users\\Saistout\\Desktop\\636\\data\\stock_prices.csv")
+
+##Use princomp to calculate principle components, cor need not be true since data has been standardized
+pca = princomp(dta)
+
+##Calculate eigen values and vectors for future answer
+eigs = eigen(var(dta))
+
+##Calcaulte principle components one and two
+pc1 = as.matrix(dta) %*% pca[[2]][,1]
+pc2 = as.matrix(dta) %*% pca[[2]][,2]
+
+##Find the index of the maximum and minimum values for pc1
+week_max = which.max(pc1)
+week_min= which.min(pc1)
+```
+
+#### (a)
+```{r}
+summary(pca)
+```
+From the results of princomp, the proportion of the variance explained by the first principle component is 0.52926066, for the second principle component it is 0.27133298. So together the first two principle components account for 0.80059364 of the variance.
+  
+#### (b)
+The coefficients of the first principle component are, (`r pca[[2]][,1]`). This is not a contrast, but a scaled mean. From the larger values for Shell and ExxonMobil, we appear to have evidence that energy companies are more important in explaining the variation in the data than are banking companies. Both energy companies appear to be of equal importance, while Well Fargo is less important in explaining the variation than Citibank is. Weeks this Pc highlight are those where all stocks did well, or all stocks did poorly.  
+  
+#### (c)
+The coefficients of the second principle component are, (`r pca[[2]][,2]`). This is a contrast between banking companies and energy companies. Again Wells Fargo is the least important banking company, but this time JP Morgan is the most important. Both energy companies appear to be of equal importance. So, weeks where energy companies increase in price while banking companies decrease, or vice versa, would be highlighted by this principle component. 
+  
+#### (d)
+The first two eigenvalues for the covariance matrix are $\lambda$ = (`r eigs[[1]][1]`, `r eigs[[1]][2]*1000`x10^-3^). The variances of the first two principle components are: (`r pca[[1]][1]*pca[[1]][1]`, `r pca[[1]][2]*pca[[1]][2]*1000`x10^-3^). This is the same as $\lambda$ (close enough with rounding).
+  
+#### (e)
+```{r}
+plot(pc1, pc2)
+```
+  
+The week with the highest value for PC1 is week `r week_max`, which corresponds to the following values (`r dta[week_max,]`). This week contains large decreases across all of the stocks, with energy companies decreasing the most.
+  
+The week with the lowest value for PC1 is week `r week_min`, which corresponds to the following values (`r dta[week_min,]`). This week contains large increases across all stocks, with energy companies increasing the most. 
+  
+These two are expected to be the most extreme values for PC1 since PC1 is a measure of the increase or decrease all of all stock prices.
+
+\pagebreak
+
+#### (b)
+The dendograms for the three different linkages are:
+```{r}
+##Define distance matrix
+dist = as.dist(matrix(c(0,3,2,5,0,0,4,1,0,0,0,7,0,0,0,0), nrow =4, ncol=4), diag=TRUE)
+##Do each of single, complete and average
+s_clust = hclust(dist, method="single")
+c_clust = hclust(dist, method="complete")
+a_clust = hclust(dist, method="average")
+
+plot(s_clust, main="Single Cluster Dendrogram")
+plot(c_clust, main="Complete Cluster Dendrogram")
+plot(a_clust, main="Average Cluster Dendrogram")
+```
+  
+The dendograms differ in only the separation between the clusters i.e. the height, they all agree on the clusters, (2,4) and (1,3). 
+
+\pagebreak
+
+### Question (4)
+```{r}
+##Read Data
+cereal = read.csv("C:\\Users\\Saistout\\Desktop\\636\\data\\cereal.csv")
+##Create complete hierarchical cluster
+cereal_h = hclust(dist(cereal[,2:9]), method="complete")
+##Give the cereal titles
+cereal_h[[4]]=cereal[,1]
+```
+#### (a)
+```{r}
+##Create Dendogram
+plot(cereal_h, main="Cereal Complete Dendogram")
+##Create skree-plot like thing to find which cluster matter
+plot(1:42,cereal_h[[2]])
+```
+  
+Looking at the dendogram, as well as the sort-of-skree-plot, it looks like there are 3 clusters. This conclusion is backed up by the sort-of-skree plot, where the final points have the elbow-like look. These 3 clusters are, roughly, cereals with, mostly, Bran in the name, and higher potassium, cereals low in sodium, like Corn Pops, and everything else.  
+This is to be expected sine the variables were not standardized, so the larger values of Sodium and Potassium are where most of the difference between the cereals will be found. 
+  
+#### (b)
+```{r}
+##Do K-means clustering with K=3
+cereal_k=kmeans(cereal[,2:9],3)
+##Calculate the PC of the cereal data
+pc_cereal=princomp(cereal[,2:9])
+##Calculate the first two PCs
+pcc1 = as.matrix(cereal[,2:9]) %*% pc_cereal[[2]][,1]
+pcc2 = as.matrix(cereal[,2:9]) %*% pc_cereal[[2]][,2]
+##Create a matrix with the PCs and the component membership number
+PCs=cbind(pcc1,pcc2, cereal_k[[1]])
+##Plots the first two PC2 by cluster with different colors
+plot(PCs[PCs[,3]==1,], xlab="PC1", ylab="PC2", col="blue", xlim=c(-400,50), ylim=c(-100,300))
+points(PCs[PCs[,3]==2,], col="red")
+points(PCs[PCs[,3]==3,], col="green")
+
+```
+  
+The coefficients first two PCs of the data are (`r pc_cereal[[2]][,1]*100`)x10^-2^ and (`r pc_cereal[[2]][,2]*100`)x10^-2^. The first principle component finds cereals high in both sodium and potassium, or low in both. The second PC finds cereals that are high in sodium and low in potassium, or vice versa. Looking at the plot, we can see one group that has a high value for PC1, which corresponds to the Bran group from the hierarchial clustering. The group with low PC1 and high PC2 corresponds to the Corn Pops group, While the blue group is the other group. Visualizing the data this way, it is much easier to see how the clusters are defined.
+
+  
+### Question 5
+```{r}
+##Read data and name rows/ columns as defined in the homework
+X = as.matrix(read.table("C:\\Users\\Saistout\\Desktop\\636\\data\\T12-8.DAT", header=FALSE))
+pot_type = c("A","B", "C", "D")
+pot_site = paste("P", 0:6, sep = "_")
+rownames(X) = pot_site
+colnames(X) = pot_type
+##Multidimensional Scale
+pot_scale = cmdscale(dist(X), k =2)
+```
+#### (a)
+```{r}
+##Plot the results with the site names as plotting characters
+plot(pot_scale, pch=" ")
+text(pot_scale,labels=rownames(X))
+```
+  
+From the scaling, it is clear that site 3 and 0 are similiar, as are 4, 5 and 1. Site 6 is very different from all of the other sites. 
+  
+#### (b)
+```{r}
+##Create the biplot using the principle components
+biplot(princomp(X))
+```
+  
+The biplot is very similar to the MDS plot. Site 6 continues to be very different from the other sites, with pot type  C as the reason why. 0 and 3 continue to be similar. 5, 4 and 1 are also still similar. These results are all consistent with the MDS plot.
