@@ -1,0 +1,98 @@
+---
+title: "Assignment 5"
+author: "Chris Berardi"
+date: "December 4th, 2017"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+###1
+```{r}
+##Read Data
+happy <- read.csv("C:\\Users\\Saistout\\Desktop\\636\\data\\happiness.csv")
+attach(happy)
+##Rename coumns names to more useful names
+colnames(happy) <- c("Country", "Region", "Religion", "Religiosity", "Economy", "Family", "Health","Freedom", "Trust", "Generosity", "Dystopia")
+
+## Set up containers and variables or Leave One Out Cross Validation (LOOCV)
+n_countries <- nrow(happy)
+lin_error <- matrix(ncol=1, nrow=n_countries)
+
+##Do LOOCV
+for (i in 1:n_countries){
+  tr_data <- happy[-i,]
+  val_data<- happy[i,]
+  linear <- lm(Dystopia ~ Economy + Family + Health + Freedom + Trust + Generosity, tr_data)
+  lin.pred <- predict.lm(linear,val_data)
+  lin_error[i] <- lin.pred-happy[i,11]
+}
+##Calculate MSE
+mean(lin_error^2)
+##Bootstrap from CV MSE to estimate standard deviation of the MSE
+boot_error_lin <- matrix(ncol=1,nrow=1000)
+for (i in 1:1000){
+  boot_error_lin[i] <- mean(sample(lin_error,n_countries, replace=TRUE)^2)
+}
+boot_MSE_sd <-sd(boot_error_lin)
+
+##Bootstrap from repeated appliction of linear model
+for (i in 1:1000){
+  happy_boot <- happy[sample(1:n_countries,replace=TRUE ),]
+  ## Fit model for MSE estimate
+  linear_boot <- lm(Dystopia ~ Economy + Family + Health + Freedom + Trust + Generosity, happy_boot)
+  lin.pred_boot <- predict.lm(linear_boot,happy_boot)
+  boot_diff <- lin.pred_boot-happy_boot[ ,11]
+  boot_error_lin[i] <- mean(boot_diff^2)
+}
+boot_model_sd<-sd(boot_error_lin)
+```
+
+###2
+```{r}
+library(glmnet)
+##Use cv.glmnet to find optimum tuning parameter lambda with 5-fold cross validation
+lasso_5fold <- cv.glmnet(as.matrix(happy[,5:10]), as.matrix(happy[,11]),nfold=5, family='gaussian')
+plot(lasso_5fold$lambda,lasso_5fold$cvm)
+plot(lasso_5fold$lambda,lasso_5fold$nzero)
+##Record optimum lambda
+lambda <- lasso_5fold$lambda.min
+
+##Create container for errors
+las_error <- matrix(ncol=1, nrow=n_countries)
+
+##Do LOOCV with the lambda with the minimum MSE from above
+for (i in 1:n_countries){
+  tr_data <- as.matrix(happy[-i,5:11])
+  val_data <- as.matrix(happy[i,5:10])
+  lasso=glmnet(tr_data[-i,1:6], tr_data[-i,7],family='gaussian', lambda=lambda)
+  las.pred <- predict.glmnet(lasso,newx=val_data,s=lambda, type='response')
+  las_error[i] <- las.pred-happy[i,11]
+}
+##Calculate MSE
+mean(las_error^2)
+##Bootstrap to estimate standard deviation of the MSE
+boot_error_las <- matrix(ncol=1,nrow=1000)
+for (i in 1:1000){
+  boot_error_las[i] <- mean(sample(las_error,n_countries, replace=TRUE)^2)
+}
+boot_lasso_mse_sd <- sd(boot_error_las)
+
+##Bootstrap from repeated appliction of LASSO model
+for (i in 1:1000){
+  happy_boot <- happy[sample(1:n_countries,replace=TRUE ),]
+  ## Fit model for MSE estimate
+  happy_mat <- as.matrix(happy_boot[,5:11])
+  lasso.boot=glmnet(happy_mat[,1:6], happy_mat[,7],family='gaussian', lambda=lambda)
+  las.pred_boot <- predict.glmnet(lasso.boot,newx=happy_mat[,1:6],s=lambda, type='response')
+  boot_diff <- las.pred_boot-happy_boot[ ,11]
+  boot_error_lin[i] <- mean(boot_diff^2)
+}
+boot_lasso_sd<-sd(boot_error_lin)
+
+##Compare Lasso beta to linear beta
+lasso$beta
+linear$coefficients
+```
